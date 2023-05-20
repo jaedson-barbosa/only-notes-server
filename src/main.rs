@@ -1,31 +1,25 @@
-mod config;
-mod handler;
-mod jwt_auth;
-mod model;
-mod request;
-mod response;
-mod route;
-
-use std::sync::Arc;
-
-use axum::http::{
-    header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
-    HeaderValue, Method,
+use axum::{
+    extract::{Query, State},
+    http::{
+        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, Method, StatusCode,
+    },
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
 };
-use route::create_router;
-use tower_http::cors::CorsLayer;
-
+use chrono::prelude::*;
+use dotenvy_macro::dotenv;
+use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-
-pub struct AppState {
-    db: Pool<Postgres>,
-}
+use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
     let pool = match PgPoolOptions::new()
         .max_connections(10)
-        .connect(config::DATABASE_URL)
+        .connect(dotenv!("DATABASE_URL"))
         .await
     {
         Ok(pool) => {
@@ -51,4 +45,91 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+struct AppState {
+    db: Pool<Postgres>,
+}
+
+#[derive(Debug, Deserialize, sqlx::FromRow, Serialize, Clone)]
+struct Note {
+    author: String,
+    content: String,
+    date: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GetNotes {
+    author: String,
+    from: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PostNote {
+    author: String,
+    content: String,
+}
+
+fn create_router(app_state: Arc<AppState>) -> Router {
+    Router::new()
+        .route("/api/notes", get(get_notes_handler))
+        .route("/api/notes", post(post_note_handler))
+        .with_state(app_state)
+}
+
+async fn get_notes_handler(
+    State(data): State<Arc<AppState>>,
+    get_params: Query<GetNotes>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let notes = (match get_params.from {
+        Some(from) => {
+            sqlx::query_as!(
+                Note,
+                "SELECT * FROM notes WHERE author = $1 and date > $2",
+                get_params.author,
+                from
+            )
+            .fetch_all(&data.db)
+            .await
+        }
+        None => {
+            sqlx::query_as!(
+                Note,
+                "SELECT * FROM notes WHERE author = $1",
+                get_params.author
+            )
+            .fetch_all(&data.db)
+            .await
+        }
+    })
+    .map_err(|e| {
+        let error_response = serde_json::json!({
+            "status": "error",
+            "message": format!("Database error: {}", e),
+        });
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+    })?;
+    Ok(Json(notes))
+}
+
+async fn post_note_handler(
+    State(data): State<Arc<AppState>>,
+    Json(body): Json<PostNote>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let new_note = sqlx::query_as!(
+        Note,
+        "INSERT INTO notes (author,content) VALUES ($1, $2) RETURNING *",
+        body.author,
+        body.content,
+    )
+    .fetch_one(&data.db)
+    .await
+    .map_err(|e| {
+        let error_response = serde_json::json!({
+            "status": "fail",
+            "message": format!("Database error: {}", e),
+        });
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+    })?;
+    Ok(Json(new_note))
 }
