@@ -1,0 +1,17 @@
+-- Add up migration script here
+CREATE TABLE "users" (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(100) NOT NULL,
+    date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX users_email_idx ON users (email);
+
+CREATE TABLE "notes" (
+    id INT GENERATED ALWAYS AS IDENTITY,
+    author INT REFERENCES users(id) NOT NULL,
+    content VARCHAR(102400) NOT NULL,
+    tags VARCHAR(255) ARRAY NOT NULL,
+    date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
