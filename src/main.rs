@@ -79,6 +79,7 @@ struct GetNotes {
 struct PostNote {
     author: String,
     content: String,
+    iv: String
 }
 
 fn create_router(app_state: Arc<AppState>) -> Router {
@@ -129,9 +130,10 @@ async fn post_note_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let new_note = sqlx::query_as!(
         Note,
-        "INSERT INTO notes (author,content) VALUES ($1, $2) RETURNING *",
+        "INSERT INTO notes (author,content,iv) VALUES ($1, $2, $3) RETURNING *",
         body.author,
         body.content,
+        body.iv
     )
     .fetch_one(&data.db)
     .await
