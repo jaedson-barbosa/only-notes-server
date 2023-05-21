@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use chrono::prelude::*;
-use dotenvy_macro::dotenv;
+use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::sync::Arc;
@@ -17,9 +17,11 @@ use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
+    let _ = dotenv();
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
     let pool = match PgPoolOptions::new()
         .max_connections(10)
-        .connect(dotenv!("DATABASE_URL"))
+        .connect(&database_url)
         .await
     {
         Ok(pool) => {
