@@ -64,6 +64,7 @@ struct AppState {
 #[derive(Debug, Deserialize, sqlx::FromRow, Serialize, Clone)]
 struct Note {
     author: String,
+    iv: String,
     content: String,
     date: DateTime<Utc>,
 }
