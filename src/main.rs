@@ -12,13 +12,20 @@ use chrono::prelude::*;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use std::sync::Arc;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
     let _ = dotenv();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
+    let port = std::env::var("PORT")
+        .expect("PORT must be set.")
+        .parse::<u16>()
+        .expect("PORT must be a valid number.");
     let pool = match PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
@@ -43,7 +50,8 @@ async fn main() {
     let app = create_router(Arc::new(AppState { db: pool.clone() })).layer(cors);
 
     println!("🚀 Server started successfully");
-    axum::Server::bind(&"0.0.0.0:8000".parse().unwrap())
+    let addr: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port);
+    axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
