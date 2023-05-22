@@ -94,13 +94,13 @@ struct PostNote {
 
 fn create_router(app_state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/account/check", get(check_register))
-        .route("/api/notes", get(get_notes_handler))
-        .route("/api/notes", post(post_note_handler))
+        .route("/account", get(check_account))
+        .route("/notes", get(get_notes_handler))
+        .route("/notes", post(post_note_handler))
         .with_state(app_state)
 }
 
-async fn check_register(
+async fn check_account(
     State(data): State<Arc<AppState>>,
     get_params: Query<CheckRegister>,
 ) -> Result<Json<CheckRegisterResponse>, (StatusCode, Json<serde_json::Value>)> {

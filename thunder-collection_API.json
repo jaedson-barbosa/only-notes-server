@@ -1,0 +1,91 @@
+{
+    "client": "Thunder Client",
+    "collectionName": "API",
+    "dateExported": "2023-05-22T21:33:43.964Z",
+    "version": "1.1",
+    "folders": [
+        {
+            "_id": "8ab26ffd-776c-4e25-b742-b950d2a6c00e",
+            "name": "Notes",
+            "containerId": "",
+            "created": "2023-05-15T21:57:30.547Z",
+            "sortNum": 20000
+        },
+        {
+            "_id": "e4b4a875-b121-4c09-8458-79e34cc249d1",
+            "name": "Account",
+            "containerId": "",
+            "created": "2023-05-22T21:26:59.904Z",
+            "sortNum": 30000
+        }
+    ],
+    "requests": [
+        {
+            "_id": "75270d9a-211b-42a6-980d-0087b822e735",
+            "colId": "ca81bf64-c324-4dd5-b990-056245fe4e4e",
+            "containerId": "8ab26ffd-776c-4e25-b742-b950d2a6c00e",
+            "name": "Get",
+            "url": "https://only-notes-server-production.up.railway.app/api/notes?from=2023-05-16T02:22:18Z&author=teste 2",
+            "method": "GET",
+            "sortNum": 40000,
+            "created": "2023-05-15T21:57:30.550Z",
+            "modified": "2023-05-22T21:26:42.897Z",
+            "headers": [],
+            "params": [
+                {
+                    "name": "from",
+                    "value": "2023-05-16T02:22:18Z",
+                    "isPath": false
+                },
+                {
+                    "name": "author",
+                    "value": "teste 2",
+                    "isPath": false
+                }
+            ],
+            "auth": {
+                "type": "none"
+            },
+            "tests": []
+        },
+        {
+            "_id": "c123be6d-3cf4-4437-b049-621295005120",
+            "colId": "ca81bf64-c324-4dd5-b990-056245fe4e4e",
+            "containerId": "8ab26ffd-776c-4e25-b742-b950d2a6c00e",
+            "name": "Post",
+            "url": "https://only-notes-server-production.up.railway.app/api/notes",
+            "method": "POST",
+            "sortNum": 50000,
+            "created": "2023-05-16T02:20:39.313Z",
+            "modified": "2023-05-22T21:24:31.570Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n    \"content\": \"Hello world\",\n    \"author\": \"teste 2\",\n    \"iv\": \"000\"\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "6d0e9abd-1b58-472b-9257-b9443459b356",
+            "colId": "ca81bf64-c324-4dd5-b990-056245fe4e4e",
+            "containerId": "e4b4a875-b121-4c09-8458-79e34cc249d1",
+            "name": "Check",
+            "url": "https://only-notes-server-production.up.railway.app/account/check?author=teste ",
+            "method": "GET",
+            "sortNum": 60000,
+            "created": "2023-05-22T21:27:04.448Z",
+            "modified": "2023-05-22T21:28:07.032Z",
+            "headers": [],
+            "params": [
+                {
+                    "name": "author",
+                    "value": "teste ",
+                    "isPath": false
+                }
+            ],
+            "tests": []
+        }
+    ]
+}
