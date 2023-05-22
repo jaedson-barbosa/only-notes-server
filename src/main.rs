@@ -1,10 +1,6 @@
 use axum::{
     extract::{Query, State},
-    http::{
-        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
-        HeaderValue, Method, StatusCode,
-    },
-    response::IntoResponse,
+    http::{HeaderValue, Method, StatusCode},
     routing::{get, post},
     Json, Router,
 };
@@ -42,10 +38,8 @@ async fn main() {
     };
 
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-        .allow_credentials(true)
-        .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
+        .allow_origin("*".parse::<HeaderValue>().unwrap())
+        .allow_methods([Method::GET, Method::POST]);
 
     let app = create_router(Arc::new(AppState { db: pool.clone() })).layer(cors);
 
@@ -69,6 +63,11 @@ struct Note {
     date: DateTime<Utc>,
 }
 
+#[derive(sqlx::FromRow)]
+struct Date {
+    date: DateTime<Utc>,
+}
+
 #[derive(Debug, Deserialize)]
 struct GetNotes {
     author: String,
@@ -76,23 +75,65 @@ struct GetNotes {
 }
 
 #[derive(Debug, Deserialize)]
+struct CheckRegister {
+    author: String,
+}
+
+#[derive(Serialize)]
+struct CheckRegisterResponse {
+    registered: bool,
+    date: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
 struct PostNote {
     author: String,
     content: String,
-    iv: String
+    iv: String,
 }
 
 fn create_router(app_state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/account/check", get(check_register))
         .route("/api/notes", get(get_notes_handler))
         .route("/api/notes", post(post_note_handler))
         .with_state(app_state)
 }
 
+async fn check_register(
+    State(data): State<Arc<AppState>>,
+    get_params: Query<CheckRegister>,
+) -> Result<Json<CheckRegisterResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let first = sqlx::query_as!(
+        Date,
+        "SELECT date FROM notes WHERE author = $1 LIMIT 1",
+        get_params.author
+    )
+    .fetch_optional(&data.db)
+    .await
+    .map_err(|e| {
+        let error_response = serde_json::json!({
+            "status": "error",
+            "message": format!("Database error: {}", e),
+        });
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+    })?;
+    Ok(Json(match first {
+        Some(first) => CheckRegisterResponse {
+            registered: true,
+            date: Some(first.date),
+        },
+        None => CheckRegisterResponse {
+            registered: false,
+            date: None,
+        },
+    }))
+}
+
 async fn get_notes_handler(
     State(data): State<Arc<AppState>>,
     get_params: Query<GetNotes>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<Vec<Note>>, (StatusCode, Json<serde_json::Value>)> {
     let notes = (match get_params.from {
         Some(from) => {
             sqlx::query_as!(
@@ -127,7 +168,7 @@ async fn get_notes_handler(
 async fn post_note_handler(
     State(data): State<Arc<AppState>>,
     Json(body): Json<PostNote>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<Note>, (StatusCode, Json<serde_json::Value>)> {
     let new_note = sqlx::query_as!(
         Note,
         "INSERT INTO notes (author,content,iv) VALUES ($1, $2, $3) RETURNING *",
