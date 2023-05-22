@@ -92,6 +92,11 @@ struct PostNote {
     iv: String,
 }
 
+#[derive(Serialize)]
+struct ErrorResponse {
+    message: String,
+}
+
 fn create_router(app_state: Arc<AppState>) -> Router {
     Router::new()
         .route("/account", get(check_account))
@@ -103,7 +108,7 @@ fn create_router(app_state: Arc<AppState>) -> Router {
 async fn check_account(
     State(data): State<Arc<AppState>>,
     get_params: Query<CheckRegister>,
-) -> Result<Json<CheckRegisterResponse>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<CheckRegisterResponse>, (StatusCode, Json<ErrorResponse>)> {
     let first = sqlx::query_as!(
         Date,
         "SELECT date FROM notes WHERE author = $1 LIMIT 1",
@@ -112,11 +117,12 @@ async fn check_account(
     .fetch_optional(&data.db)
     .await
     .map_err(|e| {
-        let error_response = serde_json::json!({
-            "status": "error",
-            "message": format!("Database error: {}", e),
-        });
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                message: format!("Database error: {}", e),
+            }),
+        )
     })?;
     Ok(Json(match first {
         Some(first) => CheckRegisterResponse {
@@ -133,7 +139,7 @@ async fn check_account(
 async fn get_notes_handler(
     State(data): State<Arc<AppState>>,
     get_params: Query<GetNotes>,
-) -> Result<Json<Vec<Note>>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<Vec<Note>>, (StatusCode, Json<ErrorResponse>)> {
     let notes = (match get_params.from {
         Some(from) => {
             sqlx::query_as!(
@@ -156,11 +162,12 @@ async fn get_notes_handler(
         }
     })
     .map_err(|e| {
-        let error_response = serde_json::json!({
-            "status": "error",
-            "message": format!("Database error: {}", e),
-        });
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                message: format!("Database error: {}", e),
+            }),
+        )
     })?;
     Ok(Json(notes))
 }
@@ -168,7 +175,7 @@ async fn get_notes_handler(
 async fn post_note_handler(
     State(data): State<Arc<AppState>>,
     Json(body): Json<PostNote>,
-) -> Result<Json<Note>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<Note>, (StatusCode, Json<ErrorResponse>)> {
     let new_note = sqlx::query_as!(
         Note,
         "INSERT INTO notes (author,content,iv) VALUES ($1, $2, $3) RETURNING *",
@@ -179,11 +186,12 @@ async fn post_note_handler(
     .fetch_one(&data.db)
     .await
     .map_err(|e| {
-        let error_response = serde_json::json!({
-            "status": "fail",
-            "message": format!("Database error: {}", e),
-        });
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                message: format!("Database error: {}", e),
+            }),
+        )
     })?;
     Ok(Json(new_note))
 }
