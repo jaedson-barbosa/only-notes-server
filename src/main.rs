@@ -12,7 +12,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
-use tower_http::cors::{Any,CorsLayer};
+use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() {
@@ -41,7 +41,12 @@ async fn main() {
         .allow_methods([Method::GET, Method::POST])
         .allow_origin(Any);
 
-    let app = create_router(Arc::new(AppState { db: pool.clone() })).layer(cors);
+    let app = Router::new()
+        .route("/account", get(check_account))
+        .route("/notes", get(get_notes_handler))
+        .route("/notes", post(post_note_handler))
+        .layer(cors)
+        .with_state(Arc::new(AppState { db: pool.clone() }));
 
     println!("🚀 Server started successfully");
     let addr: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port);
@@ -95,14 +100,6 @@ struct PostNote {
 #[derive(Serialize)]
 struct ErrorResponse {
     message: String,
-}
-
-fn create_router(app_state: Arc<AppState>) -> Router {
-    Router::new()
-        .route("/account", get(check_account))
-        .route("/notes", get(get_notes_handler))
-        .route("/notes", post(post_note_handler))
-        .with_state(app_state)
 }
 
 async fn check_account(
