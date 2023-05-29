@@ -1,6 +1,6 @@
 use axum::{
     extract::{Query, State},
-    http::{HeaderValue, Method, StatusCode},
+    http::{Method, StatusCode},
     routing::{get, post},
     Json, Router,
 };
@@ -12,7 +12,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{Any,CorsLayer};
 
 #[tokio::main]
 async fn main() {
@@ -38,8 +38,8 @@ async fn main() {
     };
 
     let cors = CorsLayer::new()
-        .allow_origin("*".parse::<HeaderValue>().unwrap())
-        .allow_methods([Method::GET, Method::POST]);
+        .allow_methods([Method::GET, Method::POST])
+        .allow_origin(Any);
 
     let app = create_router(Arc::new(AppState { db: pool.clone() })).layer(cors);
 
