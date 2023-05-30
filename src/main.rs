@@ -43,6 +43,7 @@ async fn main() {
         .allow_origin(Any);
 
     let app = Router::new()
+        .route("/", get(health_check))
         .route("/account", get(check_account))
         .route("/notes", get(get_notes_handler))
         .route("/notes", post(post_note_handler))
@@ -101,6 +102,10 @@ struct PostNote {
 #[derive(Serialize)]
 struct ErrorResponse {
     message: String,
+}
+
+async fn health_check() -> StatusCode {
+    StatusCode::OK
 }
 
 async fn check_account(
